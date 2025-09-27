@@ -64,7 +64,7 @@ interface UserProfile {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [selectedYear, setSelectedYear] = useState("2024")
+  const [selectedYear, setSelectedYear] = useState("2025")
   const [timeRange, setTimeRange] = useState("medium_term")
   const [loading, setLoading] = useState(true)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
@@ -74,7 +74,7 @@ export default function DashboardPage() {
   const [yearlyData, setYearlyData] = useState<Record<string, any>>({})
   const [showComparison, setShowComparison] = useState(false)
 
-  const years = ["2024", "2023", "2022", "2021", "2020"]
+  const years = ["2025", "2024", "2023", "2022", "2021", "2020"]
   const timeRanges = [
     { value: "short_term", label: "Son 4 Hafta" },
     { value: "medium_term", label: "Son 6 Ay" },
@@ -82,10 +82,20 @@ export default function DashboardPage() {
   ]
 
   const mockYearlyData = {
+    "2025": {
+      totalListeningTime: 16800, // minutes
+      topTrack: { name: "Yaş Elli", artist: "Replikas", plays: 312 },
+      topArtist: { name: "Asamethon", plays: 1678 },
+      topAlbum: { name: "Güllerin Soldu", artist: "Sezen Aksu", plays: 945 },
+      totalTracks: 1356,
+      totalArtists: 167,
+      totalAlbums: 94,
+      genres: ["Turkish Rock", "Alternative", "Pop", "Indie", "Electronic"],
+    },
     "2024": {
       totalListeningTime: 15420, // minutes
       topTrack: { name: "Anti-Hero", artist: "Taylor Swift", plays: 247 },
-      topArtist: { name: "Taylor Swift", plays: 1456 },
+      topArtist: { name: "eğ", plays: 1456 },
       topAlbum: { name: "Midnights", artist: "Taylor Swift", plays: 892 },
       totalTracks: 1247,
       totalArtists: 156,
@@ -136,8 +146,64 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchUserData()
-    setYearlyData(mockYearlyData)
   }, [timeRange])
+
+  // Generate yearly data from real Spotify data
+  useEffect(() => {
+    if (topTracks.length > 0 && topArtists.length > 0) {
+      const realYearlyData = generateYearlyData()
+      setYearlyData({ ...mockYearlyData, ...realYearlyData })
+    } else {
+      setYearlyData(mockYearlyData)
+    }
+  }, [topTracks, topArtists, selectedYear])
+
+  const generateYearlyData = () => {
+    if (topTracks.length === 0 || topArtists.length === 0) return {}
+
+    // Calculate total listening time (estimate based on track durations)
+    const totalListeningTime = topTracks.reduce((total, track) => {
+      return total + Math.floor(track.duration_ms / 60000) * (track.play_count || 50) // Estimate plays
+    }, 0)
+
+    // Get unique albums from tracks
+    const uniqueAlbums = new Set(topTracks.map(track => track.album.name))
+    
+    // Extract genres from artists
+    const allGenres = topArtists.flatMap(artist => artist.genres || [])
+    const genreCounts = allGenres.reduce((acc, genre) => {
+      acc[genre] = (acc[genre] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+    const topGenres = Object.entries(genreCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([genre]) => genre)
+
+    return {
+      [selectedYear]: {
+        totalListeningTime,
+        topTrack: {
+          name: topTracks[0]?.name || "Bilinmiyor",
+          artist: topTracks[0]?.artists[0]?.name || "Bilinmiyor",
+          plays: topTracks[0]?.play_count || Math.floor(Math.random() * 200) + 100
+        },
+        topArtist: {
+          name: topArtists[0]?.name || "Bilinmiyor",
+          plays: topArtists[0]?.play_count || Math.floor(Math.random() * 1000) + 500
+        },
+        topAlbum: {
+          name: topTracks[0]?.album.name || "Bilinmiyor",
+          artist: topTracks[0]?.artists[0]?.name || "Bilinmiyor",
+          plays: Math.floor(Math.random() * 500) + 200
+        },
+        totalTracks: topTracks.length,
+        totalArtists: topArtists.length,
+        totalAlbums: uniqueAlbums.size,
+        genres: topGenres.length > 0 ? topGenres : ["Pop", "Rock", "Alternative"]
+      }
+    }
+  }
 
   const fetchUserData = async () => {
     try {
