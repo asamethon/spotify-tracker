@@ -7,7 +7,7 @@ import { Music, BarChart3, Calendar, TrendingUp, Play, Users } from "lucide-reac
 export default function HomePage() {
   const handleSpotifyLogin = () => {
     // Spotify OAuth URL'si oluşturulacak
-    const clientId = process.env.NEXT_PUBLIC_CLIENT_ID;
+    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const redirectUri = `${window.location.origin}/callback`
     const scopes = [
       "user-read-private",
